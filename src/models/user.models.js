@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema(
             lowercase: true,
             trim: true,
         },
-        fullname: {
+        fullName: {
             type: String,
             required: true,
             trim: true,
@@ -61,6 +61,34 @@ userSchema.pre("save", async function (next) {
 })
 
 userSchema.method.isPasswordCorrect = async function (password) {
-   return  await bcrypt.compare(password, this.password)
+    return await bcrypt.compare(password, this.password)
+}
+
+userSchema.method.generateAccessToken = function () {
+    return jwt.sign(
+        { // Note: left part is the name of the payload and the right part is the data coming from the database which is defined as a properties of the above user model 
+            _id: this._id,
+            email: this.email,
+            username: this.username,
+            fullName: this.fullName,
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        {
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+        }
+    )
+}
+userSchema.method.generateRefreshToken = function () {
+    return jwt.sign(
+        { // Note: left part is the name of the payload and the right part is the data coming from the database which is defined as a properties of the above user model 
+            _id: this._id,
+
+        },
+        process.env.REFRESH_TOKEN_SECRET,
+        {
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+        }
+    )
+
 }
 export const User = mongoose.model("USer", userSchema)
