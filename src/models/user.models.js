@@ -26,11 +26,11 @@ const userSchema = new mongoose.Schema(
             trim: true,
             index: true,
         },
-         avatar: {
+        avatar: {
             type: String, // cloudinary url 
             required: true,
         },
-         coverImage: {
+        coverImage: {
             type: String, // clodinary url
         },
         watchHistory: [
@@ -41,22 +41,26 @@ const userSchema = new mongoose.Schema(
         ],
         password: {
             type: String,
-            required : [true, 'Password is required']
+            required: [true, 'Password is required']
         },
         refreshToken: {
-            type : String
+            type: String
         }
-   }, 
-   {
-    timestamps: true
-   }
+    },
+    {
+        timestamps: true
+    }
 )
 
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password"))
-    return next();
+        return next();
 
     this.password = bcrypt.hash(this.password, 10)
     next()
 })
+
+userSchema.method.isPasswordCorrect = async function (password) {
+   return  await bcrypt.compare(password, this.password)
+}
 export const User = mongoose.model("USer", userSchema)
