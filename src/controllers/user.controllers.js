@@ -94,7 +94,7 @@ const registerUser = asyncHandler(async (req, res) => {
 })
 
 
-const loginUSer = asyncHandler(async (req, res) => {
+const loginUser = asyncHandler(async (req, res) => {
 
     // request body se data le aao i.e. req body -> data
     // username or email 
@@ -442,7 +442,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
 
 export {
     registerUser,
-    loginUSer,
+    loginUser,
     logoutUser,
     refreshAccessToken,
     changeCurrentPassword,
