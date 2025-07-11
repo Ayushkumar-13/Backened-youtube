@@ -37,4 +37,4 @@ router.route("/history").get(verifyJWT, getWatchHistory)
 export default router
 
 
-//   postman tool is common for industry or we can also use thunder client but priority first is for postman  
+//   postman tool is common for industry or we can also use thunder client but priority first is for postman
