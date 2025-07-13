@@ -1,11 +1,25 @@
-import { ApiError } from "../utils/ApiError.js";
+import mongoose from "mongoose";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
 
-const healthcheck = asyncHandler(async(req,res) => {
-    // TODO: build a healthcheck message that simply return the ok status as json with a message 
-})
+const healthCheck = (req, res) => {
+  const dbState = mongoose.connection.readyState;
 
-export{
-    healthcheck
-}
+  const status =
+    dbState === 1
+      ? "connected"
+      : dbState === 2
+      ? "connecting"
+      : dbState === 0
+      ? "disconnected"
+      : "disconnecting";
+
+  res.status(200).json(
+    new ApiResponse(200, {
+      server: "🟢 running",
+      database: `🟡 ${status}`,
+      timestamp: new Date().toISOString(),
+    }, "Server Health Check")
+  );
+};
+
+export { healthCheck };
