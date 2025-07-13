@@ -147,9 +147,9 @@ const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-           $unset: {
-            refreshToken: 1 // this removes the field from document 
-           }
+            $unset: {
+                refreshToken: 1 // this removes the field from document 
+            }
         },
         {
             new: true
@@ -433,12 +433,53 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         }
     ])
 
-     return res
-     .status(200)
-     .json(
-        new ApiResponse(200, user[0].WatchHistory, "watch history fetched successfully")
-     )
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, user[0].WatchHistory, "watch history fetched successfully")
+        )
 })
+
+const handleGoogleLogin = asyncHandler(async (req, res) => {
+    const { email, name, picture } = req.body;
+
+    if (!email || !name || !picture) {
+        throw new ApiError(400, "All fields (email, name, picture) are required");
+    }
+
+    let user = await User.findOne({ email });
+
+    // If user doesn't exist, create one
+    if (!user) {
+        user = await User.create({
+            email,
+            fullName: name,
+            avatar: picture,
+            username: email.split("@")[0],
+        });
+    }
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    };
+
+    return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                { user: loggedInUser, accessToken, refreshToken },
+                "Google login successful"
+            )
+        );
+});
+
 
 export {
     registerUser,
@@ -451,7 +492,8 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    handleGoogleLogin
 }
 
 

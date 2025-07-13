@@ -5,25 +5,15 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
-// ✅ Get all videos with pagination, filter, and sort
+// 🔹 Get all videos (paginated, filterable)
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query = "", sortBy = "createdAt", sortType = "desc", userId } = req.query;
 
-  const matchStage = {
-    isPublished: true
-  };
+  const matchStage = { isPublished: true };
+  if (query) matchStage.title = { $regex: query, $options: "i" };
+  if (userId && mongoose.Types.ObjectId.isValid(userId)) matchStage.owner = new mongoose.Types.ObjectId(userId);
 
-  if (query) {
-    matchStage.title = { $regex: query, $options: "i" };
-  }
-
-  if (userId && mongoose.Types.ObjectId.isValid(userId)) {
-    matchStage.owner = new mongoose.Types.ObjectId(userId);
-  }
-
-  const sortStage = {
-    [sortBy]: sortType === "asc" ? 1 : -1
-  };
+  const sortStage = { [sortBy]: sortType === "asc" ? 1 : -1 };
 
   const aggregateQuery = Video.aggregate([
     { $match: matchStage },
@@ -46,30 +36,23 @@ const getAllVideos = asyncHandler(async (req, res) => {
         views: 1,
         isPublished: 1,
         createdAt: 1,
-        owner: {
-          _id: "$owner._id",
-          username: "$owner.username"
-        }
+        owner: { _id: "$owner._id", username: "$owner.username" }
       }
     },
     { $sort: sortStage }
   ]);
 
-  const options = {
-    page: parseInt(page),
-    limit: parseInt(limit)
-  };
-
+  const options = { page: parseInt(page), limit: parseInt(limit) };
   const videos = await Video.aggregatePaginate(aggregateQuery, options);
 
   res.status(200).json(new ApiResponse(200, videos, "Videos fetched successfully"));
 });
 
-// ✅ Publish a video
+// 🔹 Publish a new video
 const publishAVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
 
-  if (!req.files || !req.files.video || !req.files.thumbnail) {
+  if (!req.files?.video?.[0] || !req.files?.thumbnail?.[0]) {
     throw new ApiError(400, "Video and thumbnail are required");
   }
 
@@ -95,37 +78,26 @@ const publishAVideo = asyncHandler(async (req, res) => {
   res.status(201).json(new ApiResponse(201, newVideo, "Video published successfully"));
 });
 
-// ✅ Get a video by ID
+// 🔹 Get video by ID
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(videoId)) {
-    throw new ApiError(400, "Invalid video ID");
-  }
+  if (!mongoose.Types.ObjectId.isValid(videoId)) throw new ApiError(400, "Invalid video ID");
 
   const video = await Video.findById(videoId).populate("owner", "username");
-
-  if (!video || !video.isPublished) {
-    throw new ApiError(404, "Video not found or unpublished");
-  }
+  if (!video || !video.isPublished) throw new ApiError(404, "Video not found or unpublished");
 
   res.status(200).json(new ApiResponse(200, video, "Video fetched successfully"));
 });
 
-// ✅ Update video details
+// 🔹 Update video details
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   const { title, description } = req.body;
 
-  if (!mongoose.Types.ObjectId.isValid(videoId)) {
-    throw new ApiError(400, "Invalid video ID");
-  }
+  if (!mongoose.Types.ObjectId.isValid(videoId)) throw new ApiError(400, "Invalid video ID");
 
   const video = await Video.findById(videoId);
-
-  if (!video) {
-    throw new ApiError(404, "Video not found");
-  }
+  if (!video) throw new ApiError(404, "Video not found");
 
   if (video.owner.toString() !== req.user._id.toString()) {
     throw new ApiError(403, "You are not authorized to update this video");
@@ -136,52 +108,36 @@ const updateVideo = asyncHandler(async (req, res) => {
 
   if (req.files?.thumbnail?.[0]) {
     const uploadedThumbnail = await uploadOnCloudinary(req.files.thumbnail[0].path);
-    if (uploadedThumbnail?.url) {
-      video.thumbnail = uploadedThumbnail.url;
-    }
+    if (uploadedThumbnail?.url) video.thumbnail = uploadedThumbnail.url;
   }
 
   await video.save();
-
   res.status(200).json(new ApiResponse(200, video, "Video updated successfully"));
 });
 
-// ✅ Delete a video
+// 🔹 Delete video
 const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(videoId)) {
-    throw new ApiError(400, "Invalid video ID");
-  }
+  if (!mongoose.Types.ObjectId.isValid(videoId)) throw new ApiError(400, "Invalid video ID");
 
   const video = await Video.findById(videoId);
-
-  if (!video) {
-    throw new ApiError(404, "Video not found");
-  }
+  if (!video) throw new ApiError(404, "Video not found");
 
   if (video.owner.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
     throw new ApiError(403, "You are not authorized to delete this video");
   }
 
   await video.deleteOne();
-
   res.status(200).json(new ApiResponse(200, {}, "Video deleted successfully"));
 });
 
-// ✅ Toggle publish status
+// 🔹 Toggle video publish status
 const togglePublishStatus = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(videoId)) {
-    throw new ApiError(400, "Invalid video ID");
-  }
+  if (!mongoose.Types.ObjectId.isValid(videoId)) throw new ApiError(400, "Invalid video ID");
 
   const video = await Video.findById(videoId);
-
-  if (!video) {
-    throw new ApiError(404, "Video not found");
-  }
+  if (!video) throw new ApiError(404, "Video not found");
 
   if (video.owner.toString() !== req.user._id.toString()) {
     throw new ApiError(403, "You are not authorized to toggle this video");
@@ -190,7 +146,9 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
   video.isPublished = !video.isPublished;
   await video.save();
 
-  res.status(200).json(new ApiResponse(200, video, `Video is now ${video.isPublished ? "Published" : "Unpublished"}`));
+  res.status(200).json(
+    new ApiResponse(200, video, `Video is now ${video.isPublished ? "Published" : "Unpublished"}`)
+  );
 });
 
 export {

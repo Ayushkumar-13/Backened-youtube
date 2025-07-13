@@ -1,40 +1,52 @@
 import express from "express";
-
 import {
   getAllVideos,
-  publishAVideo,
   getVideoById,
+  publishAVideo,
   updateVideo,
   deleteVideo,
-  togglePublishStatus
+  togglePublishStatus,
 } from "../controllers/video.controllers.js";
+
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { upload } from "../middlewares/multer.middlewares.js"; // Assuming you use multer
+import { upload } from "../middlewares/multer.middlewares.js";
 
 const router = express.Router();
 
 /**
- * Base route: /api/v1/video
+ * @route   GET /api/v1/video
+ * @desc    Get all published videos
+ * @access  Public
  */
-
-// Get all videos (public)
 router.get("/", getAllVideos);
 
-// Get a single video (public)
+/**
+ * @route   GET /api/v1/video/:videoId
+ * @desc    Get a specific video by ID
+ * @access  Public
+ */
 router.get("/:videoId", getVideoById);
 
-// Publish a new video (with file upload)
+/**
+ * @route   POST /api/v1/video
+ * @desc    Upload and publish a new video
+ * @access  Private
+ */
 router.post(
   "/",
   verifyJWT,
   upload.fields([
     { name: "video", maxCount: 1 },
-    { name: "thumbnail", maxCount: 1 }
+    { name: "thumbnail", maxCount: 1 },
   ]),
   publishAVideo
 );
 
-// Update a video
+/**
+ * @route   PUT /api/v1/video/:videoId
+ * @desc    Update video details (title, description, thumbnail)
+ * @access  Private
+ */
 router.put(
   "/:videoId",
   verifyJWT,
@@ -42,10 +54,18 @@ router.put(
   updateVideo
 );
 
-// Delete a video
+/**
+ * @route   DELETE /api/v1/video/:videoId
+ * @desc    Delete a video
+ * @access  Private
+ */
 router.delete("/:videoId", verifyJWT, deleteVideo);
 
-// Toggle publish/unpublish
+/**
+ * @route   PATCH /api/v1/video/:videoId/toggle
+ * @desc    Toggle publish/unpublish status
+ * @access  Private
+ */
 router.patch("/:videoId/toggle", verifyJWT, togglePublishStatus);
 
 export default router;
